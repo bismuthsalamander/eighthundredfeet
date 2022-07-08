@@ -1,0 +1,25 @@
+{
+  "name": "eighthundredfeet",
+  "version": "1.0.0",
+  "description": "Tool for pen testing MeteorJS applications",
+  "main": "ehf.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Cliff Smith <csmith@leviathansecurity.com>",
+  "homepage": "https://gitlab.l3vsec.group/csmith/eighthundredfeet",
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.l3vsec.group/csmith/eighthundredfeet"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "ejson": "^2.2.2",
+    "http": "0.0.1-security",
+    "http-proxy-agent": "^5.0.0",
+    "https-proxy-agent": "^5.0.1",
+    "n-readlines": "^1.0.1",
+    "uuid": "^8.3.2",
+    "websocket": "^1.0.34"
+  }
+}
