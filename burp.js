@@ -5,6 +5,7 @@ const confuser = require('./confuser');
 
 const PAGE_SIZE = 1024*1024;
 
+//unpack a 32-bit big endian integer
 function unpackBE32(buf, start) {
   var n = 0;
   for (var i = 0; i < 4; ++i) {
@@ -14,6 +15,11 @@ function unpackBE32(buf, start) {
   return n;
 }
 
+/**
+ * Loads all DDP messages from the specified Burp project file.  Unless the
+ * parameter includePingPong is specified and true, pings and pongs are
+ * omitted from the output.
+ **/
 function loadMessages(filename, includePingPong) {
   if (includePingPong === undefined) {
     includePingPong = false;
@@ -71,6 +77,11 @@ function loadMessages(filename, includePingPong) {
   return results;
 };
 
+/**
+ * Loads client -> server method call and subscription messages, filtering out
+ * duplicates with the same parameter type structures.  See messagesEqual below
+ * and typeDescriptor/typesEqual in confuser.js.
+ **/
 function loadTargets(filename) {
   const messages = loadMessages(filename);
   const methodMessages = messages.filter((m) => m.msg === 'method' || m.msg === 'sub');
@@ -129,41 +140,3 @@ function messagesEqual(m1, m2) {
 }
 
 module.exports = {loadMessages, loadTargets};
-
-function main() {
-  var c = new DDPClient({appUrl: 'http://localhost:3000'});
-  console.log(c);
-  //c.on('sent', (m) => console.log(m));
-  var mgr = new ConfuserProbeManager(c, {
-    'message': {'msg':'method', 'id':util.randomId(), 'method':'oneStringOrNumber','params':[1]}
-  });
-  mgr.on('completed', () => {
-    console.log("Answers", mgr.answers);
-    c.close();
-  });
-  c.on('ready', () => {mgr.start();});
-  c.on('ddpMessage', (m) => (console.log(m)));
-  c.start();
-}
-
-/*
-var paramLists = [[0,1],[0,'yes',false],[0,1,2],['yes',0,true],[{'dog':'cat'}],[{'dog':{'breed':'shihtzu','color':'whatever'}}]];
-var types = paramLists.map((e) => typeDescriptor(e));
-for (var i = 0; i < types.length; ++i) {
-  let confusers = getConfusers(types[i]);
-  console.log("params", paramLists[i]);
-  //console.log(types[i]);
-  console.log("confusers", confusers);
-  let msg = {'msg':'method','method':'whatever','params':paramLists[i]};
-  let probes = confuserInputs(msg);
-  console.log("probes", probes);
-  for (var j = 0; j < confusers.length; ++j) {
-    for (var k = 0; k < confusers[j].types.length; ++k) {
-      //var obj = JSON.parse(JSON.stringify(paramLists[i]));
-      //applyConfuserProbeToParams(obj, mutators[j].accessPath, mutators[j].types[k], 0);
-      //console.log("SENDING TO SERVER", obj);
-    }
-  }
-  console.log('*************');
-};
-*/

@@ -1,4 +1,6 @@
-//todo fix usage of -l flag
+//Arg parser - written from scratch, but this was a good example to learn from:
+//https://github.com/eveningkid/args-parser/blob/master/parse.js
+//TODO: fix usage of -l flag
 const opt = {
   named: [
     {
