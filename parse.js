@@ -135,7 +135,7 @@ function argParse(args) {
 function required(args, requiredArgs) {
   requiredArgs.forEach((a) => {
     if (!args[a]) {
-      const arg = opt.find((x) => x.name == a);
+      const arg = opt.named.find((x) => x.name == a);
       console.error("error: missing argument", arg.name, "(-" + arg.flag + ")");
       process.exit(1);
     }

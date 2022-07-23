@@ -195,7 +195,10 @@ class DDPClient extends EventEmitter {
   }
   
   close() {
-    this.ws.close();
+    if (this.ws) {
+      this.ws.close();
+      this.ws = undefined;
+    }
   }
   
   send(message) {
@@ -229,6 +232,33 @@ class DDPClient extends EventEmitter {
     return url;
   }
 };
+
+/**
+ * Helper functions for generating client objects from command-line options.
+ * Currently automatically errors out and exits if arguments are invalid.
+ **/
+function autoClientOpt(args) {
+  let opt = {appUrl: args.urlbase};
+  if (args.username && args.password) {
+    opt.login = {username: args.username, password: args.password};
+  } else if (args.token) {
+    opt.login = {token: args.token};
+  } else if (args.username) {
+    util.errlog0('error: username specified but no password (-p password)');
+    process.exit(1);
+  } else if (args.password) {
+    util.errlog0('error: password specified but no username (-u username)');
+    process.exit(1);
+  }
+  opt.proxy = args.proxy ? args.proxy : undefined;
+  opt.concurrency = args.concurrency ? args.concurrency : undefined;
+  return opt;
+}
+
+function autoClient(args) {
+  let opt = autoClientOpt(args);
+  return new DDPClient(opt);
+}
 
 const defaultManagerOptions = {
   concurrency: 5,
@@ -498,4 +528,4 @@ function loginMessage(opt) {
   return loginMsg;
 }
 
-module.exports = {FileProbeManager, ProbeManager, DDPClient, DDPMessage, QuiverProbeManager, loginMessage, passwordParameter };
+module.exports = {FileProbeManager, ProbeManager, DDPClient, DDPMessage, QuiverProbeManager, loginMessage, passwordParameter, autoClient, autoClientOpt};

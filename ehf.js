@@ -4,7 +4,8 @@ const burp = require('./burp');
 const confuser = require('./confuser');
 const util = require('./util');
 const ddp = require('./ddp');
-const {usageShort, usage} = ('./help');
+const {usageShort, usage} = require('./help');
+const harness = require('./harness');
 
 args = argParse(process.argv.slice(2));
 if (args.verbose) {
@@ -12,29 +13,6 @@ if (args.verbose) {
 }
 
 let client = undefined;
-
-function autoClientOpt(args) {
-  let opt = {appUrl: args.urlbase};
-  if (args.username && args.password) {
-    opt.login = {username: args.username, password: args.password};
-  } else if (args.token) {
-    opt.login = {token: args.token};
-  } else if (args.username) {
-    util.errlog0('error: username specified but no password (-p password)');
-    process.exit(1);
-  } else if (args.password) {
-    util.errlog0('error: password specified but no username (-u username)');
-    process.exit(1);
-  }
-  opt.proxy = args.proxy ? args.proxy : undefined;
-  opt.concurrency = args.concurrency ? args.concurrency : undefined;
-  return opt;
-}
-
-function autoClient(args) {
-  let opt = autoClientOpt(args);
-  return new ddp.DDPClient(opt);
-}
 
 if (args.pos[0] == 'dumpmessages' || args.pos[0] == 'dumpconfusertargets') {
   required(args, ['burpfile']);
@@ -108,7 +86,7 @@ if (args.pos[0] == 'dumpmessages' || args.pos[0] == 'dumpconfusertargets') {
   let mgrs = [];
   let completed = 0;
   for (var i = 0; i < args.parallelism; ++i) {
-    let mgr = new ddp.FileProbeManager(autoClient(args), {
+    let mgr = new ddp.FileProbeManager(ddp.autoClient(args), {
       filename: args.wordlist,
       lineDelta: args.parallelism,
       startIndex: i,
@@ -139,7 +117,7 @@ if (args.pos[0] == 'dumpmessages' || args.pos[0] == 'dumpconfusertargets') {
   let mgrs = [];
   let completed = 0;
   for (var i = 0; i < args.parallelism; ++i) {
-    let mgr = new ddp.FileProbeManager(autoClient(args), {
+    let mgr = new ddp.FileProbeManager(ddp.autoClient(args), {
       filename: args.wordlist,
       lineDelta: args.parallelism,
       startIndex: i,
@@ -160,7 +138,7 @@ if (args.pos[0] == 'dumpmessages' || args.pos[0] == 'dumpconfusertargets') {
 } else if (['bruteusers', 'enumusers', 'userenum', 'enumuser', 'userbuster'].includes(args.pos[0])) {
   //todo support parallelism and don't read the whole file into memory?
   let opt = {
-    clientOpt: autoClientOpt(args)
+    clientOpt: ddp.autoClientOpt(args)
   };
   let userlist = fs.readFileSync(args.wordlist).toString();
   let mgr = new ddp.QuiverProbeManager({
@@ -176,7 +154,7 @@ if (args.pos[0] == 'dumpmessages' || args.pos[0] == 'dumpconfusertargets') {
 } else if (['brutepasswords', 'passwordbuster'].includes(args.pos[0])) {
   //todo: support parallelism
   let opt = {
-    clientOpt: autoClientOpt(args)
+    clientOpt: ddp.autoClientOpt(args)
   };
   let username = args.username;
   let passwordlist = fs.readFileSync(args.wordlist).toString();
@@ -196,6 +174,9 @@ if (args.pos[0] == 'dumpmessages' || args.pos[0] == 'dumpconfusertargets') {
     }
   });
   mgr.start();
+} else if (['harness', 'harnessserver'].includes(args.pos[0])) {
+  //todo: support parallelism
+  let server = harness.harnessServer(args);
 } else {
   if (args.pos[0]) {
     util.errlog0("unrecognized command", args.pos[0]);

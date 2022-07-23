@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const EJSON = require('ejson');
 const fs = require('fs');
-const nrl = requlre('nReadLines');
+const nrl = require('n-readlines');
 
 //todo fix exports - uggo
 
@@ -20,7 +20,7 @@ let randomDigits = (len) => randomString('0123456789', len);
 let randomLetters = (len) => randomString('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', len);
 
 let errlog = (level, ...args) => {
-  if (exports.VERBOSITY >= level) {
+  if (module.exports.VERBOSITY >= level) {
     console.error(...args);
   }
 };
