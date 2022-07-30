@@ -5,7 +5,6 @@ const fs = require('fs');
 
 function harnessServer(opt) {
   const app = express();
-  console.log(opt);
   let seedTemplate = fs.readFileSync('./seed.html').toString(); //todo: dir(__file__)?
   console.log(seedTemplate); 
   let messageText = fs.readFileSync(opt.messagefile);
@@ -22,9 +21,7 @@ function harnessServer(opt) {
     let response = await(getMessageResponse(msg, opt));
     res.json(response);
   });
-  app.get('/seed', (req, res) => {
-  });
-  app.listen(9010);
+  app.listen(opt.named.port);
   return app;
 }
 

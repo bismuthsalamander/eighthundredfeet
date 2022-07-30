@@ -39,6 +39,7 @@ class DDPMessage {
       return null;
     }
     let data = EJSON.parse(str);
+    //TODO: implement support for multiple messages?
     if (Array.isArray(data)) {
       if (data.length != 1) {
         throw new Error("DDP message contained more than one array entry!");

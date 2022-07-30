@@ -215,7 +215,9 @@ if (['appjs', 'static', 'staticanalysis', 'checksec'].includes(args.pos[0])) {
   });
   mgr.start();
 } else if (['harness', 'harnessserver'].includes(args.pos[0])) {
-  //todo: support parallelism
+  if (!args.named.port) {
+    args.named.port = 9010;
+  }
   let server = harness.harnessServer(args);
 } else {
   if (args.pos[0]) {

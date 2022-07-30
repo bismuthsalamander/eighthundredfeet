@@ -119,11 +119,9 @@ function applyConfuserProbeToParams(params, probe) {
 
 //turn confusers into a list of ProbeManager inputs
 function inputsFromConfusers(confusers) {
-  //this is so confusing
   //each confuser has one access path and a list of types
   //turn it into a list of single-type probe inputs
   //map each confuser into an array, then flatten
-  //use reduce instead of flat because i'm currently on node 10 (ubuntu, why)
   let inp = confusers.map((c) => (c.types.map((t) => ({
     'accessPath': c.accessPath,
     'type': t,
