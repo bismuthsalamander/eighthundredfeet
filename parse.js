@@ -63,6 +63,12 @@ const opt = {
       'description': 'number of parallel probe managers for one brute forcing task (see also -c/--concurrency; total concurrent messages = concurrency * parallelism)',
       'samplevalue': '3'
     },
+    {
+      'flag': 'r',
+      'name': 'replace',
+      'description': 'string to replace with fuzzing inputs',
+      'samplevalue': 'FUZZME'
+    }
   ],
   flags: [
     {
@@ -133,6 +139,9 @@ function argParse(args) {
 }
 
 function required(args, requiredArgs) {
+  if (typeof requiredArgs == 'string') {
+    requiredArgs = [requiredArgs];
+  }
   requiredArgs.forEach((a) => {
     if (!args[a]) {
       const arg = opt.named.find((x) => x.name == a);

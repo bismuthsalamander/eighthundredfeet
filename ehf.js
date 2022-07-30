@@ -219,6 +219,35 @@ if (['appjs', 'static', 'staticanalysis', 'checksec'].includes(args.pos[0])) {
     args.named.port = 9010;
   }
   let server = harness.harnessServer(args);
+  console.log("Visit http://localhost:" + args.named.port + "/seed in a browser to generate HTTP requests matching each DDP message.");
+} else if (['fuzz', 'fuzzer'].includes(args.pos[0])) {
+  console.log(args);
+  required(args, ['messagefile', 'urlbase', 'replace', 'wordlist']);
+  const msgfile = args.messagefile;
+  let data = fs.readFileSync(msgfile);
+  let msgs = ejson.parse(data.toString());
+  msgs = msgs.filter((m) => ejson.stringify(m).contains(args.replace));
+  let output = {};
+  let remaining = msgs.length;
+  let managers = msgs.map((msg) => {
+    var mgr = new ddp.FileProbeManager(ddp.autoClient(args), {
+      filename: args.wordlist,
+      originalMessageStr: ejson.stringify(msg),
+      generateMessage: (n) => ejson.parse(msg.replace(args.replace, n.name)),
+      generateAnswer: (m) => m
+    });
+    mgr.on('completed', () => {
+      mgr.client.ws.close();
+      output[ejson.stringify(mgr.opt.message)] = mgr.answers;
+      --remaining;
+      util.errlog2("Probe manager completed;", remaining, "remaining");
+      if (remaining === 0) {
+        console.log(output);
+      }
+    });
+    return mgr;
+  });
+  mgr.forEach((m) => m.forceStart());
 } else {
   if (args.pos[0]) {
     util.errlog0("unrecognized command", args.pos[0]);
