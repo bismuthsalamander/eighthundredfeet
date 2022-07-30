@@ -2,6 +2,8 @@ const { v4: uuidv4 } = require('uuid');
 const EJSON = require('ejson');
 const fs = require('fs');
 const nrl = require('n-readlines');
+const http = require('http');
+const https = require('https');
 
 //todo fix exports - uggo
 
@@ -53,6 +55,19 @@ const parsePkgAndUrl = (url) => {
   return httpsResult;
 };
 
+const getUrl = (inputUrl) => {
+  let {url, pkg} = parsePkgAndUrl(inputUrl);
+  return new Promise((resolve, reject) => {
+    //console.log("Have promise", url);
+    pkg.get(url, (response) => {
+      let body = '';
+      response.on('data', (part) => body += part);
+      response.on('end', () => { resolve(body); });
+      response.on('error', (e) => { console.error(e); reject(e); });  
+    });
+  });
+};
+
 //todo
 /**
  * i want this class so I can have multiple probemanagers reading from the same
@@ -77,6 +92,6 @@ class FileComicBookStore {
 */
 
 
-module.exports = {randomId, randomString, randomDigits, randomLetters, errlog, errlog0, errlog1, errlog2, errlog3, ejsonClone, parsePkgAndUrl};
+module.exports = {randomId, randomString, randomDigits, randomLetters, errlog, errlog0, errlog1, errlog2, errlog3, ejsonClone, parsePkgAndUrl, getUrl};
 
 module.exports.VERBOSITY = 0;

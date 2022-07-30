@@ -6,6 +6,8 @@ const util = require('./util');
 const ddp = require('./ddp');
 const {usageShort, usage} = require('./help');
 const harness = require('./harness');
+const staticanalysis = require('./static');
+const ejson = require('ejson');
 
 args = argParse(process.argv.slice(2));
 if (args.verbose) {
@@ -14,7 +16,44 @@ if (args.verbose) {
 
 let client = undefined;
 
-if (args.pos[0] == 'dumpmessages' || args.pos[0] == 'dumpconfusertargets') {
+if (['appjs', 'static', 'staticanalysis', 'checksec'].includes(args.pos[0])) {
+  required(args, 'urlbase');
+  let badpkg = ['insecure', 'autopublish'];
+  staticanalysis.scanAllJs(args.urlbase).then((data) => {
+    if (data.call.length) {
+      console.log("Methods called from client-side JS:");
+      console.log("-----------------------------------");
+      console.log(data.call.join("\n") + "\n");
+    }
+    if (data.method.length) {
+      console.log("Leaked server-side method definitions:");
+      console.log("--------------------------------------");
+      console.log(data.method.join("\n") + "\n");
+    }
+    if (data.subscribe.length) {
+      console.log("Publications subscribed to in client-side JS:");
+      console.log("---------------------------------------------");
+      console.log(data.subscribe.join("\n") + "\n");
+    }
+    if (data.method.length) {
+      console.log("Leaked server-side publication definitions:");
+      console.log("-------------------------------------------");
+      console.log(data.publish.join("\n") + "\n");
+    }
+    if (data.pkg.length) {
+      let bad = data.pkg.filter((x) => badpkg.includes(x));
+      if (bad.length) {
+        console.log("*** INSECURE PACKAGES: ***");
+        console.log("--------------------------");
+        console.log(bad.join("\n") + "\n");
+      }
+      console.log("Enabled packages:");
+      console.log("-----------------");
+      console.log(data.pkg.map((x) => x + (badpkg.includes(x) ? ' ***INSECURE***' : '')).join("\n") + "\n");
+    }
+    
+  });
+} else if (args.pos[0] == 'dumpmessages' || args.pos[0] == 'dumpconfusertargets') {
   required(args, ['burpfile']);
   const burpfile = args.burpfile;
   let msg = undefined;
@@ -41,6 +80,7 @@ if (args.pos[0] == 'dumpmessages' || args.pos[0] == 'dumpconfusertargets') {
   }
   console.log(JSON.stringify(msg, null, 4));
 } else if (args.pos[0] == 'confuser') {
+  //todo rewrite this
   //todo figure out right way to do parallelism?
   //todo i think we have confusers dump their probes into a queue and go
   let client = autoinit(args);
@@ -151,7 +191,7 @@ if (args.pos[0] == 'dumpmessages' || args.pos[0] == 'dumpconfusertargets') {
     console.log(mgr.answers);
   });
   mgr.start();
-} else if (['brutepasswords', 'passwordbuster'].includes(args.pos[0])) {
+} else if (['brutepasswords', 'passwordbuster', 'brutepass', 'passbuster'].includes(args.pos[0])) {
   //todo: support parallelism
   let opt = {
     clientOpt: ddp.autoClientOpt(args)
