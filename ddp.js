@@ -379,8 +379,18 @@ class ProbeManager extends EventEmitter {
     if (typeof input == 'string') {
       input = {'name': input};
     }
-    let message = this.opt.generateMessage(input);
-    message.id = util.randomId();
+    //We use this try/catch block because when fuzzing, generateMessage will
+    //cause a JSON deserialization exception if the replacement creates an
+    //invalid payload.  Other testing has indicated that Meteor properly
+    //rejects all invalid JSON, so we can just skip those inputs.
+    let message = undefined;
+    try {
+      message = this.opt.generateMessage(input);
+      message.id = util.randomId();
+    } catch (e) {
+      util.errlog1("skipping probe for input", input, "because generateMessage caused exception", e);
+      return;
+    }
     this.probes[message.id] = {...input, 'message': message};
     this.client.send(message);
   }

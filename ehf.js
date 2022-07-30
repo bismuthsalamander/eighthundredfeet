@@ -78,11 +78,10 @@ if (['appjs', 'static', 'staticanalysis', 'checksec'].includes(args.pos[0])) {
   } else {
     msg = burp.loadTargets(burpfile);
   }
-  console.log(JSON.stringify(msg, null, 4));
+  console.log(msg.map((m) => JSON.stringify(m)).join("\n"));
 } else if (args.pos[0] == 'confuser') {
-  //todo rewrite this
-  //todo figure out right way to do parallelism?
-  //todo i think we have confusers dump their probes into a queue and go
+  //TODO: implement parallelism in a way that doesn't assume each message has
+  //an equal number of probes? confusers dump their probes into a queue?
   let client = autoinit(args);
   required(args, ['messagefile', 'urlbase']);
   const msgfile = args.messagefile;
@@ -221,33 +220,31 @@ if (['appjs', 'static', 'staticanalysis', 'checksec'].includes(args.pos[0])) {
   let server = harness.harnessServer(args);
   console.log("Visit http://localhost:" + args.named.port + "/seed in a browser to generate HTTP requests matching each DDP message.");
 } else if (['fuzz', 'fuzzer'].includes(args.pos[0])) {
-  console.log(args);
   required(args, ['messagefile', 'urlbase', 'replace', 'wordlist']);
   const msgfile = args.messagefile;
-  let data = fs.readFileSync(msgfile);
-  let msgs = ejson.parse(data.toString());
-  msgs = msgs.filter((m) => ejson.stringify(m).contains(args.replace));
+  let data = fs.readFileSync(msgfile).toString();
+  let msgsText = data.split("\n").filter((m) => m.includes(args.replace));
   let output = {};
-  let remaining = msgs.length;
-  let managers = msgs.map((msg) => {
-    var mgr = new ddp.FileProbeManager(ddp.autoClient(args), {
+  let remaining = msgsText.length;
+  let managers = msgsText.map((msg) => {
+    let mgr = new ddp.FileProbeManager(ddp.autoClient(args), {
       filename: args.wordlist,
-      originalMessageStr: ejson.stringify(msg),
+      originalMessageStr: msg,
       generateMessage: (n) => ejson.parse(msg.replace(args.replace, n.name)),
       generateAnswer: (m) => m
     });
     mgr.on('completed', () => {
       mgr.client.ws.close();
-      output[ejson.stringify(mgr.opt.message)] = mgr.answers;
+      output[ejson.stringify(mgr.opt.originalMessageStr)] = mgr.answers;
       --remaining;
       util.errlog2("Probe manager completed;", remaining, "remaining");
       if (remaining === 0) {
-        console.log(output);
+        console.log(JSON.stringify(output, null, 4));
       }
     });
     return mgr;
   });
-  mgr.forEach((m) => m.forceStart());
+  managers.forEach((m) => m.forceStart());
 } else {
   if (args.pos[0]) {
     util.errlog0("unrecognized command", args.pos[0]);

@@ -142,13 +142,17 @@ function required(args, requiredArgs) {
   if (typeof requiredArgs == 'string') {
     requiredArgs = [requiredArgs];
   }
+  let anyMissing = false;
   requiredArgs.forEach((a) => {
     if (!args[a]) {
+      anyMissing = true;
       const arg = opt.named.find((x) => x.name == a);
       console.error("error: missing argument", arg.name, "(-" + arg.flag + ")");
-      process.exit(1);
     }
   });
+  if (anyMissing) {
+    process.exit(1);
+  }
 }
 
 module.exports = {argParse, required};
