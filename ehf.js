@@ -174,20 +174,31 @@ if (['appjs', 'static', 'staticanalysis', 'checksec'].includes(args.pos[0])) {
     mgrs.push(mgr);
     mgr.forceStart();
   }
-} else if (['bruteusers', 'enumusers', 'userenum', 'enumuser', 'userbuster'].includes(args.pos[0])) {
-  //todo support parallelism and don't read the whole file into memory?
+} else if (['bruteusers', 'enumusers', 'userenum', 'enumuser', 'userbuster', 'bruteemails', 'enumemails', 'emailenum', 'enumemail', 'emailbuster'].includes(args.pos[0])) {
+  let mode = (args.pos[0].includes('user')) ? 'user' : 'email';
   let opt = {
     clientOpt: ddp.autoClientOpt(args)
   };
+  //todo support parallelism and don't read the whole file into memory?
   let userlist = fs.readFileSync(args.wordlist).toString();
   let mgr = new ddp.QuiverProbeManager({
     ...opt,
-    inputs: userlist.split("\n"),
-    generateMessage: (n) => ddp.loginMessage({'username':n.name,'password':'fake'}),
+    inputs: userlist.split("\n").map((x) => x.trim()),
+    generateMessage: (n) => {
+      let payload = {'password': 'fake'};
+      if (mode == 'user') {
+        payload['username'] = n.name;
+      } else {
+        payload['email'] = n.name;
+      }
+      return ddp.loginMessage(payload);
+    },
     generateAnswer: (m) => (m.error && m.error.reason === 'User not found') ? undefined : m
   });
   mgr.on('completed', () => {
-    console.log(mgr.answers);
+    let results = Object.keys(mgr.answers);
+    console.log(util.heading(mode == 'user' ? 'VALID USERNAMES:' : 'VALID EMAIL ADDRESSES:'));
+    console.log(results.length > 0 ? results.join("\n") : "None");
   });
   mgr.start();
 } else if (['brutepasswords', 'passwordbuster', 'brutepass', 'passbuster'].includes(args.pos[0])) {
@@ -199,7 +210,7 @@ if (['appjs', 'static', 'staticanalysis', 'checksec'].includes(args.pos[0])) {
   let passwordlist = fs.readFileSync(args.wordlist).toString();
   let mgr = new ddp.QuiverProbeManager({
     ...opt,
-    inputs: passwordlist.split("\n"),
+    inputs: passwordlist.split("\n").map((x) => x.trim()),
     generateMessage: (n) => ddp.loginMessage({'username':username,'password':n.name}),
     generateAnswer: (m) => (m.error && m.error.reason === 'Incorrect password') ? undefined : m
   });
@@ -223,7 +234,7 @@ if (['appjs', 'static', 'staticanalysis', 'checksec'].includes(args.pos[0])) {
   required(args, ['messagefile', 'urlbase', 'replace', 'wordlist']);
   const msgfile = args.messagefile;
   let data = fs.readFileSync(msgfile).toString();
-  let msgsText = data.split("\n").filter((m) => m.includes(args.replace));
+  let msgsText = data.split("\n").map((x) => x.trim()).filter((m) => m.includes(args.replace));
   let output = {};
   let remaining = msgsText.length;
   let managers = msgsText.map((msg) => {

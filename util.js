@@ -68,6 +68,9 @@ const getUrl = (inputUrl) => {
   });
 };
 
+const heading = (str) => {
+  return str + "\n" + "-".repeat(str.length);
+};
 //todo
 /**
  * i want this class so I can have multiple probemanagers reading from the same
@@ -92,6 +95,6 @@ class FileComicBookStore {
 */
 
 
-module.exports = {randomId, randomString, randomDigits, randomLetters, errlog, errlog0, errlog1, errlog2, errlog3, ejsonClone, parsePkgAndUrl, getUrl};
+module.exports = {randomId, randomString, randomDigits, randomLetters, errlog, errlog0, errlog1, errlog2, errlog3, ejsonClone, parsePkgAndUrl, getUrl, heading};
 
 module.exports.VERBOSITY = 0;

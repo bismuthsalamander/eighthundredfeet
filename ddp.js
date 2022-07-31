@@ -530,8 +530,9 @@ function passwordParameter(pw) {
 //helper to generate a login message.
 function loginMessage(opt) {
   let loginMsg = {'msg': 'method', 'method': 'login', 'params': []};
-  if (opt.username && opt.password) {
-    loginMsg.params = [{'user':{'username':opt.username},'password':passwordParameter(opt.password)}];
+  if ((opt.username || opt.email) && opt.password) {
+    let userParam = opt.username ? {'username':opt.username} : {'email':opt.email}
+    loginMsg.params = [{'user':userParam,'password':passwordParameter(opt.password)}];
   } else if (opt.token) {
     loginMsg.params = [{'resume':opt.token}];
   }
