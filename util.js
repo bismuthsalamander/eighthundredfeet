@@ -5,8 +5,6 @@ const nrl = require('n-readlines');
 const http = require('http');
 const https = require('https');
 
-//todo fix exports - uggo
-
 let randomId = () => uuidv4();
 
 let randomString = (chars, len) => {

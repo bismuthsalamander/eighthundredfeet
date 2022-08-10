@@ -8,14 +8,14 @@ MESSAGES
 </script>
 <script type="text/javascript">
 window.onload = function() {
-  var messageData = JSON.parse(atob(document.getElementById('msg').innerText.trim()));
+  var messageData = atob(document.getElementById('msg').innerText.trim()).split("\n");
   for (var i = 0; i < messageData.length; ++i) {
-    var msg = messageData[i];
+    var msg = messageData[i].trim();
     console.log(msg);
     var xhr = new XMLHttpRequest();
     xhr.open('POST', '/proxy');
     xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
-    xhr.send(JSON.stringify(msg));
+    xhr.send(msg);
   }
   document.writeln("Done.");
 }

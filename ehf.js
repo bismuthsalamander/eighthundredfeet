@@ -21,34 +21,28 @@ if (['appjs', 'static', 'staticanalysis', 'checksec'].includes(args.pos[0])) {
   let badpkg = ['insecure', 'autopublish'];
   staticanalysis.scanAllJs(args.urlbase).then((data) => {
     if (data.call.length) {
-      console.log("Methods called from client-side JS:");
-      console.log("-----------------------------------");
+      console.log(util.heading("Methods called from client-side JS:"));
       console.log(data.call.join("\n") + "\n");
     }
     if (data.method.length) {
-      console.log("Leaked server-side method definitions:");
-      console.log("--------------------------------------");
+      console.log(util.heading("Leaked server-side method definitions:"));
       console.log(data.method.join("\n") + "\n");
     }
     if (data.subscribe.length) {
-      console.log("Publications subscribed to in client-side JS:");
-      console.log("---------------------------------------------");
+      console.log(util.heading("Publications subscribed to in client-side JS:"));
       console.log(data.subscribe.join("\n") + "\n");
     }
     if (data.method.length) {
-      console.log("Leaked server-side publication definitions:");
-      console.log("-------------------------------------------");
+      console.log(util.heading("Leaked server-side publication definitions:"));
       console.log(data.publish.join("\n") + "\n");
     }
     if (data.pkg.length) {
       let bad = data.pkg.filter((x) => badpkg.includes(x));
       if (bad.length) {
-        console.log("*** INSECURE PACKAGES: ***");
-        console.log("--------------------------");
+        console.log(util.heading("*** INSECURE PACKAGES: ***"));
         console.log(bad.join("\n") + "\n");
       }
-      console.log("Enabled packages:");
-      console.log("-----------------");
+      console.log(util.heading("Enabled packages:"));
       console.log(data.pkg.map((x) => x + (badpkg.includes(x) ? ' ***INSECURE***' : '')).join("\n") + "\n");
     }
     
@@ -107,7 +101,7 @@ if (['appjs', 'static', 'staticanalysis', 'checksec'].includes(args.pos[0])) {
       });
       return mgr;
     });
-    client.on('ready', () => {
+    client.on('booted', () => {
       util.errlog1("Connected; starting", managers.length, "managers");
       managers.forEach((m) => m.start());
     });
@@ -225,11 +219,12 @@ if (['appjs', 'static', 'staticanalysis', 'checksec'].includes(args.pos[0])) {
   });
   mgr.start();
 } else if (['harness', 'harnessserver'].includes(args.pos[0])) {
-  if (!args.named.port) {
-    args.named.port = 9010;
+  if (!args.port) {
+    args.port = 9010;
   }
+  required(args, ['port', 'messagefile', 'urlbase']);
   let server = harness.harnessServer(args);
-  console.log("Visit http://localhost:" + args.named.port + "/seed in a browser to generate HTTP requests matching each DDP message.");
+  console.log("Visit http://localhost:" + args.port + "/seed in a browser to generate HTTP requests matching each DDP message.");
 } else if (['fuzz', 'fuzzer'].includes(args.pos[0])) {
   required(args, ['messagefile', 'urlbase', 'replace', 'wordlist']);
   const msgfile = args.messagefile;

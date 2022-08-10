@@ -25,6 +25,10 @@ const defaultOptions = {
  *
  * DDPMessage.wireString: turns an object into the JSON array string Meteor
  * expects to receive over the wire.
+ *
+ * DDPMessage.idRef: takes a server-to-client message and returns the ID of the
+ * referenced client-to-server message.  Checks in fields id, offendingMessage
+ * and subs.  Assumes that only one subscription is referenced in subs.
  **/
 class DDPMessage {
   static wireString(m) {
@@ -56,6 +60,12 @@ class DDPMessage {
     }
     return input;
   }
+  
+  static idRef(m) {
+    let id = m.offendingMessage !== undefined ? m.offendingMessage.id : m.id;
+    id = m.subs !== undefined && m.subs.length && m.subs.length > 0 ? m.subs[0] : id;
+    return id;
+  }
 };
 
 /**
@@ -65,7 +75,7 @@ class DDPMessage {
  *
  * Emitted events:
  *
- * ready
+ * booted
  * loginSuccessful
  * loginFailed
  * open
@@ -83,7 +93,7 @@ class DDPMessage {
  *
  * Calling start() will open the websocket connection and automatically handle
  * the DDP connect and login messages.  Ping messages sent by the server are
- * responded to automatically.  The ready event is emitted after login
+ * responded to automatically.  The booted event is emitted after login
  * succeeds; if no login info was provided, it's emitted after the connect
  * message succeeds.  Usually the probe manager (or other client code) should
  * wait for this event.  Call send() to push a message through.  Call close()
@@ -105,7 +115,7 @@ class DDPClient extends EventEmitter {
   }
   
   initLoggers() {
-    this.on('ready', (data) => util.errlog2('ready event', data));
+    this.on('booted', (data) => util.errlog2('booted event', data));
     this.on('loginSuccessful', (data) => util.errlog2('loginSuccessful event', data));
     this.on('loginFailed', (data) => util.errlog1('loginFailed event', data));
     this.on('open', (data) => util.errlog3('open event', data));
@@ -148,7 +158,7 @@ class DDPClient extends EventEmitter {
           }
           if (data.result.token) {
             client.sessionToken = data.result.token;
-            client.emit('ready', data);
+            client.emit('booted', data);
             client.emit('loginSuccessful', data);
           } else {
             client.emit('loginFailed', data);
@@ -156,7 +166,7 @@ class DDPClient extends EventEmitter {
         });
         client.send(loginMsg);
       } else {
-        client.emit('ready');
+        client.emit('booted');
       }
     });
     this.on('failed', (data) => {
@@ -312,14 +322,14 @@ class ProbeManager extends EventEmitter {
   
   forceStart() {
     let mgr = this;
-    this.client.once('ready', () => mgr.start());
+    this.client.once('booted', () => mgr.start());
     this.client.start();
   }
   
   start() {
     let manager = this;
     this.client.on('ddpMessage', (m) => {
-      let id = m.offendingMessage !== undefined ? m.offendingMessage.id : m.id;
+      let id = DDPMessage.idRef(m);
       let probe =  manager.probes[id];
       if (!probe) {
         return;
@@ -461,7 +471,7 @@ class QuiverProbeManager extends ProbeManager {
     this.emit('refillStarted');
     this.initClient();
     let manager = this;
-    this.client.on('ready', () => {
+    this.client.on('booted', () => {
       let p = undefined;
       while (!this.opt.stopped && this.belowCapacity() && (p = this.getNextProbe()) !== null) {
         this.addProbe(p);
