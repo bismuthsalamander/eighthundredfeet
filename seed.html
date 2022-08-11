@@ -10,6 +10,9 @@ MESSAGES
 window.onload = function() {
   var messageData = atob(document.getElementById('msg').innerText.trim()).split("\n");
   for (var i = 0; i < messageData.length; ++i) {
+    if (messageData[i].length == 0) {
+      continue;
+    }
     var msg = messageData[i].trim();
     console.log(msg);
     var xhr = new XMLHttpRequest();

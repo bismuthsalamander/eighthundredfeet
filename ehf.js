@@ -138,7 +138,6 @@ if (['appjs', 'static', 'staticanalysis', 'checksec'].includes(args.pos[0])) {
     mgr.forceStart();
   }
 } else if (['pubbuster', 'publicationbuster', 'brutepubs', 'brutepublications'].includes(args.pos[0])) {
-  //todo copy methodbuster
   required(args, ['wordlist', 'urlbase']);
   
   //TODO: turn this into a global default rather than a per-command default?
@@ -222,9 +221,13 @@ if (['appjs', 'static', 'staticanalysis', 'checksec'].includes(args.pos[0])) {
   if (!args.port) {
     args.port = 9010;
   }
-  required(args, ['port', 'messagefile', 'urlbase']);
+  required(args, ['port', 'urlbase']);
   let server = harness.harnessServer(args);
-  console.log("Visit http://localhost:" + args.port + "/seed in a browser to generate HTTP requests matching each DDP message.");
+  if (args.messagefile) {
+    console.log("Visit http://localhost:" + args.port + "/seed in a browser to generate HTTP requests matching each DDP message.");
+  } else {
+    console.log("Harness server running at http://localhost:" + args.port + "/.  Specify a seed file (-m file.txt) to automatically populate the HTTP proxy with requests for each known DDP message.");
+  }
 } else if (['fuzz', 'fuzzer'].includes(args.pos[0])) {
   required(args, ['messagefile', 'urlbase', 'replace', 'wordlist']);
   const msgfile = args.messagefile;

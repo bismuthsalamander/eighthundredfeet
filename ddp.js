@@ -11,8 +11,10 @@ const crypto = require('crypto');
 
 const defaultOptions = {
   autoConnect: true,
-  autoPong: true
+  autoPong: true,
+  trackCollections: true
 };
+const COLLECTION_MESSAGES = ['added', 'changed', 'removed', 'addedBefore', 'movedBefore'];
 
 /**
  * Utility methods for DDP messages.
@@ -69,6 +71,66 @@ class DDPMessage {
 };
 
 /**
+ * Stores documents in one or more collections and processes added, updated,
+ * movedBefore, etc. messages sent server-to-client during the lifetime of a
+ * subscription.  This class is urrently used in the harness server to present
+ * point-in-time snapshots of publication contents to the HTTP client.  The
+ * applyCollectionMsg() function will do nothing and return false if the
+ * message argument is not a DDP message that alters the contents of a
+ * collection.
+ **/
+class CollectionStore {
+  isCollectionMessage(msg) {
+    return COLLECTION_MESSAGES.includes(msg.msg);
+  }
+  
+  constructor(options) {
+    this.collections = {};
+  }
+  
+  ensureExists(cname) {
+    if (!this.collections.hasOwnProperty(cname)) {
+      this.collections[cname] = [];
+    }
+  }
+  
+  applyCollectionMsg(msg) {
+    if (!this.isCollectionMessage(msg)) {
+      return false;
+    }
+    let cname = msg.collection;
+    this.ensureExists(cname);
+    let docid = msg.id;
+    let before = msg.before;
+    if (msg.msg == 'added') {
+        let obj = msg.fields;
+        obj['id'] = docid;
+        this.collections[cname].push(obj);
+    } else if (msg.msg == 'changed') {
+        let target = this.collections[cname].find((x) => x.id == docid);
+        Object.entries(msg.fields).forEach((k, v) => target[k] = v);
+    } else if (msg.msg == 'removed') {
+        this.collections[cname] = this.collections[cname].filter((x) => x.id != docid);
+    } else if (msg.msg == 'addedBefore') {
+        let obj = msg.fields;
+        obj['id'] = docid;
+        let idx = this.collections[cname].findIndex((x) => x.id == before);
+        this.collections[cname] = this.collections[cname].slice(0, idx).concat([obj], this.collections[cname].slice(idx));
+    } else if (msg.msg == 'movedBefore') {
+        let doc = this.collections[cname].find((x) => x.id == docid);
+        let rest = this.collections[cname].filter((x) => x.id != docid);
+        let idx = rest.findIndex((x) => x.id == before);
+        this.collections[cname] = rest.slice(0, idx).concat([doc], rest.slice(idx));
+    }
+    return true;
+  }
+  
+  isEmpty() {
+    return EJSON.stringify(this.collections) == EJSON.stringify({})
+  }
+};
+
+/**
  * Thin wrapper around a websocket object with its own protocol-level DDP
  * events.  ProbeManagers listen to these events to gather results, and the
  * initLoggers() function listens for logging purposes.
@@ -111,7 +173,9 @@ class DDPClient extends EventEmitter {
     };
     this.connected = false;
     this.ws = undefined;
+    this.collections = new CollectionStore();
     this.initLoggers();
+    this.bindClientEvents();
   }
   
   initLoggers() {
@@ -124,17 +188,13 @@ class DDPClient extends EventEmitter {
     this.on('sent', (data) => util.errlog3('sent event', data));
   }
   
-  start() {
-    if (this.ws !== undefined) {
-      throw new Error("DDP client already started");
-    }
-    
+  bindClientEvents() {
     let client = this;
-    if (!this.opt.wsUrl) {
-      throw new Error("No websocket URL supplied");
+    if (this.opt.trackCollections) {
+      this.on('ddpMessage', (msg) => {
+        client.collections.applyCollectionMsg(msg);
+      });
     }
-    this.on('message', (data) => {
-    });
     if (this.opt.autoPong) {
       this.on('ping', (msg) => {
         client.send('pong');
@@ -153,7 +213,7 @@ class DDPClient extends EventEmitter {
         let loginMsg = loginMessage(login);
         loginMsg.id = client.opt.loginMsgId;
         client.on('result', (data) => {
-          if (data.id != client.loginMsgId) {
+          if (data.id != client.opt.loginMsgId) {
             return;
           }
           if (data.result.token) {
@@ -172,6 +232,20 @@ class DDPClient extends EventEmitter {
     this.on('failed', (data) => {
       throw new Error("Connection failed: " + EJSON.stringify(data));
     });
+  }
+  
+  start() {
+    if (this.ws !== undefined) {
+      throw new Error("DDP client already started");
+    }
+    
+    let client = this;
+    if (!this.opt.wsUrl) {
+      throw new Error("No websocket URL supplied");
+    }
+    //reinitialize collections in case the client ever disconnects/reconnects
+    this.collections = new CollectionStore();
+    
     
     let agent = undefined;
     if (this.opt.proxy) {
@@ -207,6 +281,18 @@ class DDPClient extends EventEmitter {
   
   close() {
     if (this.ws) {
+      this.ws.close();
+      this.ws = undefined;
+    }
+  }
+  
+  reconnect() {
+    let client = this;
+    if (this.ws) {
+      //calling start() on the ws's close event does not caues an infinite
+      //reconnection loop because the client makes a new ws object when it
+      //reconnects.
+      this.ws.on('close', () => {client.start()});
       this.ws.close();
       this.ws = undefined;
     }
@@ -252,6 +338,13 @@ function autoClientOpt(args) {
   let opt = {appUrl: args.urlbase};
   if (args.username && args.password) {
     opt.login = {username: args.username, password: args.password};
+  } else if (args.login) {
+    if (typeof args.login === 'string') {
+      opt.login = {
+        'username': args.login.substring(0, args.login.indexOf(':')), 
+        'password': args.login.substring(args.login.indexOf(':') + 1)
+      };
+    }
   } else if (args.token) {
     opt.login = {token: args.token};
   } else if (args.username) {
@@ -334,7 +427,7 @@ class ProbeManager extends EventEmitter {
       if (!probe) {
         return;
       }
-      let answer = manager.opt.generateAnswer(m, probe);
+      let answer = manager.opt.generateAnswer(m, probe, manager.client);
       if (answer !== undefined || this.opt.recordUndefinedAnswers) {
         manager.answers[probe.name] = answer;
       }
@@ -432,7 +525,7 @@ class QuiverProbeManager extends ProbeManager {
       if (!probe) {
         return;
       }
-      let answer = manager.opt.generateAnswer(m, probe);
+      let answer = manager.opt.generateAnswer(m, probe, manager.client);
       if (answer !== undefined || manager.opt.recordUndefinedAnswers) {
         manager.answers[probe.name] = answer;
       }
