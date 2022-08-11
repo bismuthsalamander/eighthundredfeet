@@ -3,7 +3,7 @@ const util = require('./util');
 const { ProbeManager, DDPMessage, DDPClient } = require('./ddp');
 const confuser = require('./confuser');
 
-const PAGE_SIZE = 1024*1024;
+const PAGE_SIZE = 8*1024*1024;
 
 //unpack a 32-bit big endian integer
 function unpackBE32(buf, start) {
@@ -25,6 +25,8 @@ function loadMessages(filename, includePingPong) {
     includePingPong = false;
   }
   const fd = fs.openSync(filename);
+  //Read the file one page at a time and find DDP messages as we go along to
+  //avoid having to store an entire Burp project file in RAM at once
   let pages = [Buffer.alloc(PAGE_SIZE), Buffer.alloc(PAGE_SIZE)];
   let msgStrings = [];
   let totBytes = 0;
@@ -83,8 +85,14 @@ function loadMessages(filename, includePingPong) {
  * and typeDescriptor/typesEqual in confuser.js.
  **/
 function loadTargets(filename) {
+  const IGNORE = ['meteor.loginServiceConfiguration', 'meteor_autoupdate_clientVersions', 'login', 'logout'];
   const messages = loadMessages(filename);
-  const methodMessages = messages.filter((m) => m.msg === 'method' || m.msg === 'sub');
+  const methodMessages = messages.filter((m) => {
+    if (!(m.msg === 'method' || m.msg === 'sub')) {
+      return false;
+    }
+    return !(IGNORE.includes(m.method) || IGNORE.includes(m.name));
+  });
   const methods = [];
   methodMessages.forEach((m) => {
     if (messagesUnique(methods, m)) {
