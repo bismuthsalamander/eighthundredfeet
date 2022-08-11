@@ -14,5 +14,6 @@ NodeJS tool for attacking MeteorJS applications
 - `node ./ehf.js methodbuster -u http://example.com/ -w methodlist.txt -l hstamper:grace01! #brute-force methods after logging in as hstamper`
 - `node ./ehf.js pubbuster -u http://example.com/ -w publist.txt -l hstamper:grace01! #brute-force publications after logging in as hstamper`
 - `node ./ehf.js dumpmessages -b app.burp method #dump all method call messages from Burp project (replace 'method' with 'sub' to  extract subscriptions; add argument 'unique' to remove apparent duplicates)`
-- `node ./ehf.js dumpconfusertargets -b app.burp >confuser.json #dump method call and subscription messages with unique parameter types from Burp project`
-- `node ./ehf.js confuser -u http://example.com/ -m confuser.json #run type confusion attacks using the specified messages as templates`
+- `node ./ehf.js dumpconfusertargets -b app.burp >targets.txt #dump method call and subscription messages with unique parameter types from Burp project`
+- `node ./ehf.js confuser -u http://example.com/ -m targets.txt #run type confusion attacks using the specified messages as templates`
+- `node ./ehf.js harness -u http://example.com/ -m targets.txt -L 9020 #open harness test server at localhost:9020
