@@ -10,7 +10,7 @@ function usageShort() {
   util.errlog0(cmd, "methodbuster -u http://example.com/ -w methodlist.txt -l hstamper:grace01! #brute-force methods after logging in as hstamper");
   util.errlog0(cmd, "pubbuster -u http://example.com/ -w publist.txt -l hstamper:grace01! #brute-force publications after logging in as hstamper");
   util.errlog0(cmd, "dumpmessages -b app.burp method #dump all method call messages from Burp project (replace 'method' with 'sub' to  extract subscriptions; add argument 'unique' to remove apparent duplicates)");
-  util.errlog0(cmd, "dumpconfusertargets -b app.burp >confuser.json #dump method call and subscription messages with unique parameter types from Burp project");
+  util.errlog0(cmd, "confusertargets -b app.burp >confuser.json #dump method call and subscription messages with unique parameter types from Burp project");
   util.errlog0(cmd, "confuser -u http://example.com/ -m confuser.json #run type confusion attacks using the specified messages as templates");
 }
 
