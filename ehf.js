@@ -47,7 +47,7 @@ if (['appjs', 'static', 'staticanalysis', 'checksec'].includes(args.pos[0])) {
     }
     
   });
-} else if (args.pos[0] == 'dumpmessages' || args.pos[0] == 'dumpconfusertargets') {
+} else if (args.pos[0] == 'dumpmessages' || args.pos[0] == 'confusertargets') {
   required(args, ['burpfile']);
   const burpfile = args.burpfile;
   let msg = undefined;

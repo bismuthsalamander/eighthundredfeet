@@ -30,7 +30,7 @@ const opt = {
     {
       'flag': 'm',
       'name': 'messagefile',
-      'description': 'file with JSON dump of messages (generate with "dumpconfusertargets -b burp.burp" or "dumpmessages method unique -b burp.burp")',
+      'description': 'file with JSON dump of messages (generate with "confusertargets -b burp.burp" or "dumpmessages method unique -b burp.burp")',
       'samplevalue': 'messages.json'
     },
     {
@@ -68,7 +68,13 @@ const opt = {
       'name': 'replace',
       'description': 'string to replace with fuzzing inputs',
       'samplevalue': 'FUZZME'
-    }
+    },
+    {
+      'flag': 'L',
+      'name': 'port',
+      'description': 'port for harness server to listen on',
+      'samplevalue': '9010'
+    },
   ],
   flags: [
     {
